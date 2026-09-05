@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/31855840/README.md)
 # Youth Budget Tracker — setup & deploy
 
 This is a full (small) Next.js project, not just loose files — it needs
@@ -69,7 +70,16 @@ actually running `npm install` + `npm run build` this time.
 ## 6. Storage bucket for receipts
 In Supabase Dashboard → Storage, create a bucket named `receipts`.
 
-## 7. Auto-fill organization_id (important — run once in Supabase)
+## 7. Run the RLS fixes (required — do this before using /admin)
+`supabase-admin-rls-fixes.sql` is included in this package. Building the
+admin screen surfaced two gaps in the original schema: `profiles` and
+`organizations` had no RLS protection at all (any logged-in user could
+technically read every organization's staff list), and none of the
+tables the admin screen writes to had insert policies yet, which means
+RLS would have silently blocked every admin action. Run this file once
+in the Supabase SQL editor before testing `/admin`.
+
+## 8. Auto-fill organization_id (important — run once in Supabase)
 The expense form never sends `organization_id` from the browser — a
 worker's device shouldn't be trusted to state its own org. Run this once
 in the Supabase SQL editor so the database fills it in automatically:
@@ -84,19 +94,27 @@ alter table youth
 alter table budget_allocations
   alter column organization_id set default get_user_org_id();
 ```
+(The other two tables that need this — `budget_categories` and
+`youth_assignments` — already have it set by `supabase-admin-rls-fixes.sql`
+in step 7, so you don't need to repeat those here.)
 
 ## Testing the flow once it's live
-1. Manually create one row in `organizations` via Supabase Table Editor.
+1. Manually create one row in `organizations` via Supabase Table Editor
+   (this one step still has to be done directly in Supabase — everything
+   after it can be done through the app).
 2. Visit `/signup?org=<that-id>&orgName=Test+Org&role=admin` on your live
    site, and create an account.
 3. Confirm the email (check your inbox — Supabase sends this by default).
 4. Log in at `/login`.
-5. Manually assign yourself a test `youth` row + a `youth_assignments`
-   row in Table Editor (there's no admin UI for this yet).
-6. Visit `/log-expense` — your test youth should now appear.
+5. Go to `/admin` — add a youth, a budget category, assign yourself
+   (or another worker) to that youth, and set a budget allocation, all
+   from the admin screen.
+6. Generate an invite link from `/admin` and use it to create a worker
+   account, or just visit `/log-expense` yourself if you assigned
+   yourself as the worker.
 
 ## Not built yet
 - The supervisor approval dashboard (reviewing pending expenses)
-- An admin screen for creating organizations, youth, and assignments
-  without touching Supabase's Table Editor directly
-- The invite-link generator/emailer (a good fit for an n8n workflow)
+- The invite-link emailer — right now `/admin` generates the link and
+  you copy/paste it yourself; automatically emailing it is a good fit
+  for an n8n workflow
