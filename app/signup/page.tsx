@@ -1,13 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+
+// Skip static generation for this page entirely — it depends on
+// useSearchParams (the invite link's query params), so there's
+// nothing meaningful to prerender anyway.
+export const dynamic = 'force-dynamic'
 
 // Expects an invite link shaped like:
 //   /signup?org=<organization_id>&orgName=Sunrise+Youth+Services&role=worker
 // An admin generates this link (or n8n emails it) when inviting staff.
-export default function SignupPage() {
+//
+// useSearchParams() requires a Suspense boundary around it for Next.js
+// to statically prerender this page, so the actual form lives in its
+// own component (SignupForm) and this file's default export just
+// wraps it in <Suspense>.
+function SignupForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -140,5 +150,19 @@ export default function SignupPage() {
         </button>
       </form>
     </main>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+          <p className="text-sm text-neutral-500">Loading…</p>
+        </main>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   )
 }
