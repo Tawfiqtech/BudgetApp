@@ -40,18 +40,24 @@ function SignupForm() {
     setStatus('loading')
     setErrorMessage('')
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          organization_id: organizationId,
-          role,
-          full_name: fullName,
-        },
-      },
-    })
+    const redirectUrl =
+  `${window.location.origin}/signup` +
+  `?org=${encodeURIComponent(organizationId)}` +
+  `&orgName=${encodeURIComponent(orgName)}` +
+  `&role=${encodeURIComponent(role)}`
 
+const { error } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    emailRedirectTo: redirectUrl,
+    data: {
+      organization_id: organizationId,
+      role,
+      full_name: fullName,
+    },
+  },
+})
     if (error) {
       setStatus('error')
       setErrorMessage(error.message)
